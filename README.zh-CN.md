@@ -25,13 +25,10 @@ OOMOL Connect。
 
 ## 快速开始
 
-OOMOL Connect 目前从源码运行。请使用 Node.js 22 或更新版本。
+最快的试用方式是 Docker Compose：
 
 ```bash
-npm install
-npm run generate:catalog
-npm run build:web
-npm run dev
+docker compose up --build
 ```
 
 打开本地控制台：
@@ -54,7 +51,8 @@ curl -s -X POST http://localhost:3000/v1/actions/hackernews.get_top_stories \
   -d '{"input":{}}'
 ```
 
-运行时状态默认保存在 `./data/connect.sqlite`。可以设置 `OOMOL_CONNECT_DATA_DIR` 使用其它目录。
+Docker Compose 会把运行时状态保存到 `connector-data` volume。容器内的 SQLite 数据库路径是
+`/app/data/connect.sqlite`。
 
 ## 连接第一个 Provider
 
@@ -213,7 +211,7 @@ Web 控制台也可以为每个 action 复制 cURL、TypeScript 和 agent prompt
 
 ## Web 控制台
 
-先执行 `npm run build:web`，然后打开 `http://localhost:3000`。
+启动运行时后打开 `http://localhost:3000`。Docker Compose 会自动构建并提供 Web 控制台。
 
 控制台可以帮助你：
 
@@ -230,7 +228,7 @@ Web 控制台也可以为每个 action 复制 cURL、TypeScript 和 agent prompt
 控制台，请设置 admin token：
 
 ```bash
-OOMOL_CONNECT_ADMIN_TOKEN="replace-with-an-admin-token" npm run dev
+OOMOL_CONNECT_ADMIN_TOKEN="replace-with-an-admin-token" docker compose up --build
 ```
 
 之后，管理端 HTTP client 必须发送：
@@ -244,7 +242,7 @@ Authorization: Bearer replace-with-an-admin-token
 ```bash
 OOMOL_CONNECT_ADMIN_TOKEN="replace-with-an-admin-token" \
 OOMOL_CONNECT_RUNTIME_TOKEN="replace-with-a-runtime-token" \
-npm run dev
+docker compose up --build
 ```
 
 如果只设置旧的 `OOMOL_CONNECT_API_TOKEN`，它会同时作为 admin token 和 runtime token 使用。
@@ -252,13 +250,13 @@ npm run dev
 加密存储的 provider 凭据和 OAuth client secret：
 
 ```bash
-OOMOL_CONNECT_ENCRYPTION_KEY="replace-with-a-long-random-secret" npm run dev
+OOMOL_CONNECT_ENCRYPTION_KEY="replace-with-a-long-random-secret" docker compose up --build
 ```
 
 限制 agent 可以执行哪些 action：
 
 ```bash
-OOMOL_CONNECT_ALLOWED_ACTIONS="hackernews.*,github.get_current_user" npm run dev
+OOMOL_CONNECT_ALLOWED_ACTIONS="hackernews.*,github.get_current_user" docker compose up --build
 ```
 
 即使某个更大的 allowlist 包含某些 action，也可以单独阻止它们：
@@ -266,27 +264,30 @@ OOMOL_CONNECT_ALLOWED_ACTIONS="hackernews.*,github.get_current_user" npm run dev
 ```bash
 OOMOL_CONNECT_ALLOWED_ACTIONS="github.*" \
 OOMOL_CONNECT_BLOCKED_ACTIONS="github.delete_repository" \
-npm run dev
+docker compose up --build
 ```
 
 凭据存储、备份、密钥轮换和 OAuth token 刷新行为见 [docs/credentials.md](docs/credentials.md)。
 
-## Docker
+## 从源码运行
 
-用 Docker Compose 运行本地运行时：
+开发 OOMOL Connect 或 provider executor 时使用源码工作流。请使用 Node.js 22 或更新版本。
 
 ```bash
-docker compose up --build
+npm install
+npm run generate:catalog
+npm run build:web
+npm run dev
 ```
 
-Compose 文件会把运行时状态挂载到 `connector-data` volume，并暴露 `3000` 端口。
+从源码运行时，运行时状态默认保存在 `./data/connect.sqlite`。可以设置 `OOMOL_CONNECT_DATA_DIR` 使用其它目录。
 
 ## 示例
 
 先启动本地运行时：
 
 ```bash
-npm run dev
+docker compose up --build
 ```
 
 然后直接用 Node 运行示例：

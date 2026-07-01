@@ -26,13 +26,10 @@ The current catalog includes 8 providers and 201 locally executable actions.
 
 ## Quick Start
 
-OOMOL Connect currently runs from source. Use Node.js 22 or newer.
+The fastest way to try OOMOL Connect is Docker Compose:
 
 ```bash
-npm install
-npm run generate:catalog
-npm run build:web
-npm run dev
+docker compose up --build
 ```
 
 Open the local console:
@@ -55,8 +52,8 @@ curl -s -X POST http://localhost:3000/v1/actions/hackernews.get_top_stories \
   -d '{"input":{}}'
 ```
 
-Runtime state is stored in `./data/connect.sqlite` by default. Set `OOMOL_CONNECT_DATA_DIR` to use
-another directory.
+Docker Compose stores runtime state in the `connector-data` volume. The container stores the SQLite
+database at `/app/data/connect.sqlite`.
 
 ## Connect Your First Provider
 
@@ -219,7 +216,8 @@ The web console also lets you copy cURL, TypeScript, and agent prompt examples f
 
 ## Web Console
 
-Build the console with `npm run build:web`, then open `http://localhost:3000`.
+Open `http://localhost:3000` after starting the runtime. Docker Compose builds and serves the web
+console automatically.
 
 The console helps you:
 
@@ -236,7 +234,7 @@ By default, the server binds to `127.0.0.1`. Set an admin token when anything ou
 browser or shell can reach the local admin API or web console:
 
 ```bash
-OOMOL_CONNECT_ADMIN_TOKEN="replace-with-an-admin-token" npm run dev
+OOMOL_CONNECT_ADMIN_TOKEN="replace-with-an-admin-token" docker compose up --build
 ```
 
 Admin HTTP clients must then send:
@@ -250,7 +248,7 @@ Set `OOMOL_CONNECT_RUNTIME_TOKEN` separately for `/v1` and `/mcp` callers:
 ```bash
 OOMOL_CONNECT_ADMIN_TOKEN="replace-with-an-admin-token" \
 OOMOL_CONNECT_RUNTIME_TOKEN="replace-with-a-runtime-token" \
-npm run dev
+docker compose up --build
 ```
 
 If you only set the legacy `OOMOL_CONNECT_API_TOKEN`, it is used as both the admin and runtime
@@ -259,13 +257,13 @@ token.
 Encrypt stored provider credentials and OAuth client secrets:
 
 ```bash
-OOMOL_CONNECT_ENCRYPTION_KEY="replace-with-a-long-random-secret" npm run dev
+OOMOL_CONNECT_ENCRYPTION_KEY="replace-with-a-long-random-secret" docker compose up --build
 ```
 
 Constrain which actions agents can execute:
 
 ```bash
-OOMOL_CONNECT_ALLOWED_ACTIONS="hackernews.*,github.get_current_user" npm run dev
+OOMOL_CONNECT_ALLOWED_ACTIONS="hackernews.*,github.get_current_user" docker compose up --build
 ```
 
 Block specific actions even when a broader allowlist includes them:
@@ -273,28 +271,33 @@ Block specific actions even when a broader allowlist includes them:
 ```bash
 OOMOL_CONNECT_ALLOWED_ACTIONS="github.*" \
 OOMOL_CONNECT_BLOCKED_ACTIONS="github.delete_repository" \
-npm run dev
+docker compose up --build
 ```
 
 See [docs/credentials.md](docs/credentials.md) for credential storage, backups, key rotation, and
 OAuth token refresh behavior.
 
-## Docker
+## Run From Source
 
-Run the local runtime with Docker Compose:
+Use the source workflow when you are developing OOMOL Connect or provider executors. Use Node.js 22
+or newer.
 
 ```bash
-docker compose up --build
+npm install
+npm run generate:catalog
+npm run build:web
+npm run dev
 ```
 
-The compose file mounts runtime state in the `connector-data` volume and exposes port `3000`.
+When running from source, runtime state is stored in `./data/connect.sqlite` by default. Set
+`OOMOL_CONNECT_DATA_DIR` to use another directory.
 
 ## Examples
 
 Start the local runtime first:
 
 ```bash
-npm run dev
+docker compose up --build
 ```
 
 Then run examples directly with Node:

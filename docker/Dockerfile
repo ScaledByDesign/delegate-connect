@@ -4,6 +4,7 @@ COPY package.json package-lock.json tsconfig.json vitest.config.ts ./
 COPY web ./web
 COPY src ./src
 COPY scripts ./scripts
+COPY examples ./examples
 COPY catalog ./catalog
 RUN npm ci
 RUN npm run generate:catalog
