@@ -382,7 +382,7 @@ function readSubmittedValues(value: unknown): Record<string, unknown> {
 }
 
 function buildSubmitBody(form: LoadedWebForm, values: Record<string, unknown>, countryCodeValue: unknown): string {
-  const fieldMap = new Map(form.fields.map((field) => [field.name, field] as const));
+  const fieldMap = new Map(form.fields.map((field) => [field.name, field]));
   const body = new URLSearchParams();
   const customFieldValues: Record<string, string> = {};
   const countryCode =
@@ -410,13 +410,13 @@ function buildSubmitBody(form: LoadedWebForm, values: Record<string, unknown>, c
       if (field.required) {
         throw new ProviderRequestError(
           400,
-          `HelloLeads form field '${field.label}' requires file upload, which is not supported in this provider pass`,
+          `HelloLeads form field '${field.label}' requires file upload, which is not supported by this action`,
         );
       }
       if (rawValue !== undefined) {
         throw new ProviderRequestError(
           400,
-          `HelloLeads form field '${field.label}' accepts file uploads, which are not supported in this provider pass`,
+          `HelloLeads form field '${field.label}' accepts file uploads, which are not supported by this action`,
         );
       }
       continue;
