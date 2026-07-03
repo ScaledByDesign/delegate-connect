@@ -43,7 +43,7 @@
 - Examples should be concrete scripts users can run directly with `node examples/...`; do not add every example to `package.json`.
 - If an example depends on external credentials, print a clear skip message when environment variables are missing.
 - Do not put web UI code under `src/`. The future console should live as a separate Vite package under `web/`.
-- Public docs should describe normal OSS usage only; do not mention internal compatibility projects, commercial context, or unreleased SDK behavior.
+- Public docs should describe normal OSS usage and may include official SaaS, hosted, or team product paths when they are part of the public product strategy. Do not mention internal compatibility projects or unreleased SDK behavior.
 
 ## Verification
 
