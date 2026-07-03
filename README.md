@@ -19,13 +19,13 @@ and give agents a controlled way to work with real SaaS products without rebuild
 from scratch.
 
 This repository is the open-source migration of oomol's broader connector catalog. The commercial
-SaaS version already supports 1,000+ SaaS providers; the OSS catalog currently includes 643+
-providers and is expanding as we migrate more integrations into maintainable open-source provider
-definitions and executors.
+SaaS version already supports 1,000+ SaaS providers; the open-source catalog currently includes
+643+ providers and is expanding as we migrate more integrations into maintainable open-source
+provider definitions and executors.
 
-[oo CLI](https://github.com/oomol-lab/oo-cli) support for the OSS runtime is in the same migration
-path from the commercial version and is targeted for mid-July 2026. Until then, use the SDK, MCP,
-HTTP API, OpenAPI, and local Web Console paths below.
+[oo CLI](https://github.com/oomol-lab/oo-cli) support for the open-source runtime is in the same
+migration path from the commercial version and is targeted for mid-July 2026. Until then, use the
+SDK, MCP, HTTP API, OpenAPI, and local Web Console paths below.
 
 ## Why OpenConnector
 
@@ -37,7 +37,7 @@ HTTP API, OpenAPI, and local Web Console paths below.
   Assets.
 - Agent-ready access through the [Connector SDK](https://github.com/oomol-lab/connector-sdk),
   MCP, HTTP API, OpenAPI, and a local Web Console, with
-  [oo CLI](https://github.com/oomol-lab/oo-cli) support in OSS adaptation.
+  [oo CLI](https://github.com/oomol-lab/oo-cli) support in open-source adaptation.
 - Runtime controls for connection identity, scopes, runtime tokens, action allow/block policies,
   temporary file transit, and redacted run logs.
 
@@ -60,7 +60,7 @@ deployment boundaries over time without rewriting the app-facing integration lay
 | Tool                                                        | Use it for                                                                                                    |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | [Connector SDK](https://github.com/oomol-lab/connector-sdk) | Call connector Actions, proxy upstream APIs, and inspect the catalog from TypeScript apps and agent runtimes. |
-| [oo CLI](https://github.com/oomol-lab/oo-cli)               | OSS runtime support is being adapted from the commercial version and is targeted for mid-July 2026.           |
+| [oo CLI](https://github.com/oomol-lab/oo-cli)               | Open-source runtime support is being adapted from the commercial version and is targeted for mid-July 2026.   |
 | MCP                                                         | Expose app Actions to MCP-capable agent hosts through `http://localhost:3000/mcp`.                            |
 | HTTP / OpenAPI                                              | Call `/v1/actions/*` directly or inspect the generated `/openapi.json` document.                              |
 
@@ -99,7 +99,7 @@ safe account labels, and execution results they need.
 
 | Path                         | Best for                                            | What you get                                                                                                              |
 | ---------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| OSS self-host                | Developers and teams that want full control         | Local Docker or Node runtime, SQLite storage, MCP, HTTP, OpenAPI, and Web Console                                         |
+| Open-source self-host        | Developers and teams that want full control         | Local Docker or Node runtime, SQLite storage, MCP, HTTP, OpenAPI, and Web Console                                         |
 | Cloudflare-compatible deploy | Teams that want a lightweight hosted runtime        | Workers runtime, D1 state, R2 transit files, and Static Assets for the console                                            |
 | [oomol](https://oomol.com/)  | Teams blocked by OAuth approval or launch deadlines | Hosted auth, runtime, and 1,000+ provider catalog, with compatible interfaces for later private or self-hosted deployment |
 

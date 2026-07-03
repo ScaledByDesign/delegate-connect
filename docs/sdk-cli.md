@@ -3,9 +3,9 @@
 OpenConnector can be used directly through MCP and HTTP, and it also has dedicated developer tools
 for application and agent workflows.
 
-`oo CLI` support for the OSS runtime is currently being adapted from the commercial version and is
-targeted for mid-July 2026. Until that lands, use the Connector SDK, MCP, HTTP API, OpenAPI, or the
-local Web Console for OSS runtime workflows.
+`oo CLI` support for the open-source runtime is currently being adapted from the commercial version
+and is targeted for mid-July 2026. Until that lands, use the Connector SDK, MCP, HTTP API, OpenAPI,
+or the local Web Console for open-source runtime workflows.
 
 ## Connector SDK
 
@@ -43,7 +43,7 @@ workflows. Use it when you want an agent on your machine to discover and call co
 capabilities through a consistent command-line entry.
 
 The commercial-version CLI flow is being migrated to the open-source runtime. This section will add
-OSS-specific setup commands once that compatibility layer is available.
+open-source runtime setup commands once that compatibility layer is available.
 
 ## Protocol APIs
 
