@@ -8,7 +8,7 @@
 ![MCP](https://img.shields.io/badge/MCP-ready-111827)
 ![OpenAPI](https://img.shields.io/badge/OpenAPI-3.1-6BA539)
 
-OpenConnector is an open-source auth gateway that connects 643 providers, supports
+OpenConnector is an open-source auth gateway that connects 643+ providers, supports
 Cloudflare-compatible deployment, and provides 6,680 prebuilt Actions that AI agents can call
 directly through the [Connector SDK](https://github.com/oomol-lab/connector-sdk),
 [oo CLI](https://github.com/oomol-lab/oo-cli), MCP, and HTTP.
@@ -18,9 +18,14 @@ executors are open source, so developers can self-host the runtime, inspect ever
 and give agents a controlled way to work with real SaaS products without rebuilding each integration
 from scratch.
 
+This repository is the open-source migration of oomol's broader connector catalog. The commercial
+SaaS version already supports 1,000+ SaaS providers; the OSS catalog currently includes 643+
+providers and is expanding as we migrate more integrations into maintainable open-source provider
+definitions and executors.
+
 ## Why OpenConnector
 
-- [643 providers and 6,680 prebuilt Actions](docs/providers.md) across SaaS products such as
+- [643+ providers and 6,680 prebuilt Actions](docs/providers.md) across SaaS products such as
   GitHub, Gmail, Notion, BigQuery, Google Analytics, Supabase, Airtable, Slack, and more.
 - Open-source auth gateway for API keys, OAuth2, custom credentials, and no-auth providers.
 - Open-source Action layer with prebuilt request/response schemas and lazy-loaded executors.
@@ -42,7 +47,7 @@ from scratch.
 
 ## Connected SaaS Logo Wall
 
-OpenConnector currently supports 643 providers and 6,680 prebuilt Actions. This logo wall is only a
+OpenConnector currently supports 643+ providers and 6,680 prebuilt Actions. This logo wall is only a
 partial preview, not the full catalog. It highlights recognizable SaaS, developer tools,
 productivity apps, analytics products, and AI services so readers can immediately see that
 OpenConnector reaches far more than the logos shown here.
@@ -62,7 +67,7 @@ flowchart LR
   Gateway --> Actions["Open-source Action Executors"]
   Gateway --> Policy["Tokens, Scopes, Allow/Block Policy"]
   Gateway --> Logs["Run Logs"]
-  Actions --> SaaS["643 Providers"]
+  Actions --> SaaS["643+ Providers"]
   Console["Web Console"] --> Gateway
   Cloudflare["Cloudflare Workers, D1, R2"] -. deploy .-> Gateway
 ```
@@ -73,11 +78,11 @@ safe account labels, and execution results they need.
 
 ## Usage Paths
 
-| Path                         | Best for                                            | What you get                                                                                  |
-| ---------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| OSS self-host                | Developers and teams that want full control         | Local Docker or Node runtime, SQLite storage, MCP, HTTP, OpenAPI, and Web Console             |
-| Cloudflare-compatible deploy | Teams that want a lightweight hosted runtime        | Workers runtime, D1 state, R2 transit files, and Static Assets for the console                |
-| [oomol](https://oomol.com/)  | Teams blocked by OAuth approval or launch deadlines | Hosted auth and runtime path, with room to migrate later to private or self-hosted deployment |
+| Path                         | Best for                                            | What you get                                                                                                       |
+| ---------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| OSS self-host                | Developers and teams that want full control         | Local Docker or Node runtime, SQLite storage, MCP, HTTP, OpenAPI, and Web Console                                  |
+| Cloudflare-compatible deploy | Teams that want a lightweight hosted runtime        | Workers runtime, D1 state, R2 transit files, and Static Assets for the console                                     |
+| [oomol](https://oomol.com/)  | Teams blocked by OAuth approval or launch deadlines | Hosted auth, runtime, and 1,000+ provider catalog, with room to migrate later to private or self-hosted deployment |
 
 ## Cloudflare Quick Start Video
 
@@ -157,9 +162,10 @@ preview, and remote deployment.
 
 OpenConnector is the open-source gateway for teams that want to self-host and control the runtime.
 
-If the business needs to go live immediately, [oomol](https://oomol.com/) provides the SaaS version:
-hosted auth and runtime infrastructure first, with room to migrate later to private or self-hosted
-deployment.
+If the business needs to go live immediately, [oomol](https://oomol.com/) provides the commercial
+SaaS version: hosted auth and runtime infrastructure, plus access to the broader 1,000+ provider
+catalog while the remaining integrations are migrated into this open-source codebase. Teams can
+start hosted and still keep a path toward private or self-hosted deployment later.
 
 For small teams or individuals who want to use a desktop Agent directly, [Wanta](https://wanta.ai/)
 connects apps through a desktop product experience and adds team app sharing, permission control,
