@@ -24,7 +24,7 @@ const docraptorValidationBody = {
     hosted: true,
     name: "oomol-connect-validation.pdf",
     type: "pdf",
-    document_content: "<html><body>OOMOL Connect validation</body></html>",
+    document_content: "<html><body>Delegate Connect validation</body></html>",
   },
 };
 

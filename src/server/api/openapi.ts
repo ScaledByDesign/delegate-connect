@@ -174,7 +174,7 @@ export function createOpenApiDocument(
   return {
     openapi: "3.1.0",
     info: {
-      title: "OOMOL Connect Local Runtime",
+      title: "Delegate Connect API",
       version: "0.1.0",
     },
     tags: [

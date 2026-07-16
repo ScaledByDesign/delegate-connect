@@ -5,7 +5,7 @@ describe("provider ids", () => {
   it("accepts catalog provider ids", () => {
     expect(isProviderId("sage_sales_management")).toBe(true);
     expect(isProviderId("wttr_in")).toBe(true);
-    expect(isProviderId("fusion-api")).toBe(true);
+    expect(isProviderId("shopify")).toBe(true);
   });
 
   it("rejects ids that are unsafe as provider paths or catalog filenames", () => {
