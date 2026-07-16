@@ -144,7 +144,7 @@ export class ConnectServer {
     app.get(
       "/docs",
       Scalar({
-        pageTitle: "OOMOL Connect API Reference",
+        pageTitle: "Delegate Connect API Reference",
         url: "/openapi.json",
         theme: "default",
         darkMode: false,

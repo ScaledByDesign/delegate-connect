@@ -12,7 +12,7 @@ const oauthCompletionStrings = {
     badge: "Connected",
     title: "Connection ready",
     bodyBefore: "OAuth finished for ",
-    bodyAfter: ". Return to OOMOL Connect to continue.",
+    bodyAfter: ". Return to Delegate Connect to continue.",
     closeButton: "Close window",
     autoClose: "Automatically closing in %N% seconds.",
     manualClose: "You can now close this window.",
@@ -21,7 +21,7 @@ const oauthCompletionStrings = {
     badge: "已连接",
     title: "连接已就绪",
     bodyBefore: "已完成 ",
-    bodyAfter: " 的授权，返回 OOMOL Connect 继续。",
+    bodyAfter: " 的授权，返回 Delegate Connect 继续。",
     closeButton: "关闭窗口",
     autoClose: "%N% 秒后自动关闭。",
     manualClose: "现在可以手动关闭此窗口。",
@@ -30,7 +30,7 @@ const oauthCompletionStrings = {
     badge: "已連接",
     title: "連線已就緒",
     bodyBefore: "已完成 ",
-    bodyAfter: " 的授權，返回 OOMOL Connect 繼續。",
+    bodyAfter: " 的授權，返回 Delegate Connect 繼續。",
     closeButton: "關閉視窗",
     autoClose: "%N% 秒後自動關閉。",
     manualClose: "現在可以手動關閉此視窗。",
@@ -39,7 +39,7 @@ const oauthCompletionStrings = {
     badge: "接続済み",
     title: "接続の準備が完了しました",
     bodyBefore: "",
-    bodyAfter: " の認証が完了しました。OOMOL Connect に戻って続行してください。",
+    bodyAfter: " の認証が完了しました。Delegate Connect に戻って続行してください。",
     closeButton: "ウィンドウを閉じる",
     autoClose: "%N% 秒後に自動的に閉じます。",
     manualClose: "このウィンドウを閉じても問題ありません。",
@@ -170,7 +170,7 @@ code {
   <div class="header">
     <span class="badge" data-t="badge">Connected</span>
     <h1 data-t="title">Connection ready</h1>
-    <p><span data-t="bodyBefore">OAuth finished for </span><code>${escapedService}</code><span data-t="bodyAfter">. Return to OOMOL Connect to continue.</span></p>
+    <p><span data-t="bodyBefore">OAuth finished for </span><code>${escapedService}</code><span data-t="bodyAfter">. Return to Delegate Connect to continue.</span></p>
   </div>
   <div class="actions">
     <button class="button" type="button" data-t="closeButton">Close window</button>
