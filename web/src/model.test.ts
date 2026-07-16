@@ -61,7 +61,7 @@ describe("sortProviders", () => {
   it("places connected providers before pinned, recommended, and display-name ordering", () => {
     const providers = [
       provider("airtable", "Airtable"),
-      provider("fusion-api", "OOMOL Fusion API"),
+      provider("figma", "Figma"),
       provider("github", "GitHub"),
       provider("zendesk", "Zendesk"),
     ];
@@ -72,7 +72,7 @@ describe("sortProviders", () => {
 
     expect(sortProviders(providers, connections).map((item) => item.service)).toEqual([
       "zendesk",
-      "fusion-api",
+      "figma",
       "github",
       "airtable",
     ]);

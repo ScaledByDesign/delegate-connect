@@ -127,7 +127,7 @@ code {
   <div class="header">
     <span class="badge">Connected</span>
     <h1>Connection ready</h1>
-    <p>OAuth finished for <code>${escapedService}</code>. Return to OOMOL Connect to continue.</p>
+    <p>OAuth finished for <code>${escapedService}</code>. Return to Delegate Connect to continue.</p>
   </div>
   <div class="actions">
     <button class="button" type="button" onclick="window.close()">Close window</button>
