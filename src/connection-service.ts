@@ -161,6 +161,11 @@ export class ConnectionService {
       : [];
   }
 
+  /** Raw stored connections across every service, with no provider catalog merging. */
+  async listAllConnections(): Promise<StoredConnection[]> {
+    return this.store.list();
+  }
+
   async listAuthenticatedServices(services: string[]): Promise<string[]> {
     const configured = await this.store.list();
     const authenticated = new Set(

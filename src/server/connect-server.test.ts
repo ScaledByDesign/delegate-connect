@@ -2238,6 +2238,329 @@ describe("ConnectServer", () => {
   });
 });
 
+describe("ConnectServer admin lens", () => {
+  it("requires the admin bearer token", async () => {
+    const app = createTestServer([apiKeyProvider], {
+      auth: { adminToken: "local-token" },
+    }).createApp();
+
+    const unauthorized = await app.request("/api/admin/lens/connections");
+    expect(unauthorized.status).toBe(401);
+
+    await app.request("/api/connections/example", {
+      method: "PUT",
+      headers: { "content-type": "application/json", authorization: "Bearer local-token" },
+      body: JSON.stringify({
+        authType: "api_key",
+        connectionName: "ws_admin_example",
+        values: { apiKey: "example-key" },
+      }),
+    });
+
+    const authorized = await app.request("/api/admin/lens/connections", {
+      headers: { authorization: "Bearer local-token" },
+    });
+    expect(authorized.status).toBe(200);
+    await expect(authorized.json()).resolves.toMatchObject({
+      connections: [{ service: "example", connectionName: "ws_admin_example", scope: "admin" }],
+    });
+  });
+
+  it("parses scope and workspace/user ids from the connectionName naming conventions", async () => {
+    const app = createTestServer([apiKeyProvider]).createApp();
+
+    const seed = async (connectionName: string) =>
+      app.request("/api/connections/example", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          authType: "api_key",
+          connectionName,
+          values: { apiKey: `key-${connectionName}` },
+        }),
+      });
+
+    await seed("ws_admin_example");
+    await seed("ws_cmnb26dpd000286ec9t94kfrb_example");
+    await seed("ws_cmnb26dpd000286ec9t94kfrb_u_user123_example");
+    await seed("totally_unrecognized");
+
+    const response = await app.request("/api/admin/lens/connections");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      connections: Array<{
+        service: string;
+        connectionName: string;
+        scope: string;
+        workspaceId: string | null;
+        userId: string | null;
+        authType: string;
+        status: string;
+        createdAt: string | null;
+        updatedAt: string | null;
+        lastUsedAt: string | null;
+        lastVerifiedAt: string | null;
+        lastError: string | null;
+      }>;
+      totals: Record<string, number>;
+    };
+
+    expect(body.connections).toEqual(
+      expect.arrayContaining([
+        {
+          service: "example",
+          connectionName: "ws_admin_example",
+          scope: "admin",
+          workspaceId: null,
+          userId: null,
+          authType: "api_key",
+          status: "unverified",
+          createdAt: null,
+          updatedAt: null,
+          lastUsedAt: null,
+          lastVerifiedAt: null,
+          lastError: null,
+        },
+        {
+          service: "example",
+          connectionName: "ws_cmnb26dpd000286ec9t94kfrb_example",
+          scope: "workspace",
+          workspaceId: "cmnb26dpd000286ec9t94kfrb",
+          userId: null,
+          authType: "api_key",
+          status: "unverified",
+          createdAt: null,
+          updatedAt: null,
+          lastUsedAt: null,
+          lastVerifiedAt: null,
+          lastError: null,
+        },
+        {
+          service: "example",
+          connectionName: "ws_cmnb26dpd000286ec9t94kfrb_u_user123_example",
+          scope: "user",
+          workspaceId: "cmnb26dpd000286ec9t94kfrb",
+          userId: "user123",
+          authType: "api_key",
+          status: "unverified",
+          createdAt: null,
+          updatedAt: null,
+          lastUsedAt: null,
+          lastVerifiedAt: null,
+          lastError: null,
+        },
+        {
+          service: "example",
+          connectionName: "totally_unrecognized",
+          scope: "unknown",
+          workspaceId: null,
+          userId: null,
+          authType: "api_key",
+          status: "unverified",
+          createdAt: null,
+          updatedAt: null,
+          lastUsedAt: null,
+          lastVerifiedAt: null,
+          lastError: null,
+        },
+      ]),
+    );
+    expect(body.totals).toEqual({ unverified: 4 });
+  });
+
+  it("filters lens connections by service", async () => {
+    const app = createTestServer([apiKeyProvider, oauthProvider]).createApp();
+
+    await app.request("/api/connections/example", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ authType: "api_key", connectionName: "ws_admin_example", values: { apiKey: "key" } }),
+    });
+
+    const response = await app.request("/api/admin/lens/connections?service=example");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { connections: Array<{ service: string }> };
+    expect(body.connections).toHaveLength(1);
+    expect(body.connections[0]?.service).toBe("example");
+  });
+
+  it("returns 404 for admin credentials on a missing connection", async () => {
+    const app = createTestServer([apiKeyProvider]).createApp();
+
+    const response = await app.request("/api/admin/credentials/example?connectionName=ws_admin_example");
+    expect(response.status).toBe(404);
+  });
+
+  it("returns the api key for an api_key connection's admin credentials", async () => {
+    const app = createTestServer([apiKeyProvider]).createApp();
+
+    await app.request("/api/connections/example", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        authType: "api_key",
+        connectionName: "ws_admin_example",
+        values: { apiKey: "example-key" },
+      }),
+    });
+
+    const response = await app.request("/api/admin/credentials/example?connectionName=ws_admin_example");
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      service: "example",
+      connectionName: "ws_admin_example",
+      authType: "api_key",
+      apiKey: "example-key",
+    });
+  });
+
+  it("returns ok:false when verifying a missing connection", async () => {
+    const app = createTestServer([apiKeyProvider]).createApp();
+
+    const response = await app.request("/api/admin/lens/connections/example/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ connectionName: "ws_admin_example" }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: false, error: "connection not found" });
+  });
+
+  it("returns ok:true when verifying an existing connection", async () => {
+    const app = createTestServer([apiKeyProvider]).createApp();
+
+    await app.request("/api/connections/example", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        authType: "api_key",
+        connectionName: "ws_admin_example",
+        values: { apiKey: "example-key" },
+      }),
+    });
+
+    const response = await app.request("/api/admin/lens/connections/example/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ connectionName: "ws_admin_example" }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+  });
+
+  it("serializes oauth2 admin credentials with a fresh access token and never leaks the refresh token", async () => {
+    const app = createTestServer([oauthProvider]).createApp();
+
+    await app.request("/api/oauth/configs/oauth_example", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ clientId: "client-id", clientSecret: "client-secret" }),
+    });
+    const authorization = await app.request("/api/oauth/authorizations", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ service: "oauth_example", connectionName: "ws_admin_oauth_example" }),
+    });
+    const { state } = (await authorization.json()) as { state: string };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          access_token: "fresh-access-token",
+          token_type: "Bearer",
+          refresh_token: "super-secret-refresh-token",
+        }),
+      ),
+    );
+    const callback = await app.request(`/oauth/callback?state=${state}&code=example-code`);
+    expect(callback.status).toBe(200);
+
+    const response = await app.request("/api/admin/credentials/oauth_example?connectionName=ws_admin_oauth_example");
+    expect(response.status).toBe(200);
+    const bodyText = await response.text();
+    expect(bodyText).not.toContain("super-secret-refresh-token");
+    expect(bodyText).not.toContain("refreshToken");
+    await expect(JSON.parse(bodyText)).toMatchObject({
+      service: "oauth_example",
+      connectionName: "ws_admin_oauth_example",
+      authType: "oauth2",
+      accessToken: "fresh-access-token",
+      tokenType: "Bearer",
+    });
+  });
+
+  it("returns values (not apiKey/accessToken) for custom_credential admin credentials", async () => {
+    const customCredentialProvider: ProviderDefinition = {
+      service: "custom_example",
+      displayName: "Custom Example",
+      categories: ["Developer Tools"],
+      authTypes: ["custom_credential"],
+      auth: [
+        {
+          type: "custom_credential",
+          fields: [
+            { key: "clientId", label: "Client ID", inputType: "text", required: true, secret: false },
+            { key: "clientSecret", label: "Client Secret", inputType: "password", required: true, secret: true },
+          ],
+        },
+      ],
+      actions: [],
+    };
+    const app = createTestServer([customCredentialProvider]).createApp();
+
+    await app.request("/api/connections/custom_example", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        authType: "custom_credential",
+        connectionName: "ws_admin_custom_example",
+        values: { clientId: "client-abc", clientSecret: "secret-xyz" },
+      }),
+    });
+
+    const response = await app.request("/api/admin/credentials/custom_example?connectionName=ws_admin_custom_example");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      service: "custom_example",
+      connectionName: "ws_admin_custom_example",
+      authType: "custom_credential",
+      values: { clientId: "client-abc", clientSecret: "secret-xyz" },
+    });
+    expect(body).not.toHaveProperty("apiKey");
+    expect(body).not.toHaveProperty("accessToken");
+  });
+
+  it("rejects the runtime token on admin lens and admin credentials routes", async () => {
+    const app = createTestServer([apiKeyProvider], {
+      auth: { adminToken: "local-token", runtimeToken: "runtime-token" },
+    }).createApp();
+
+    await app.request("/api/connections/example", {
+      method: "PUT",
+      headers: { "content-type": "application/json", authorization: "Bearer local-token" },
+      body: JSON.stringify({
+        authType: "api_key",
+        connectionName: "ws_admin_example",
+        values: { apiKey: "example-key" },
+      }),
+    });
+
+    const lensWithRuntimeToken = await app.request("/api/admin/lens/connections", {
+      headers: { authorization: "Bearer runtime-token" },
+    });
+    expect(lensWithRuntimeToken.status).toBe(401);
+
+    const credentialsWithRuntimeToken = await app.request(
+      "/api/admin/credentials/example?connectionName=ws_admin_example",
+      { headers: { authorization: "Bearer runtime-token" } },
+    );
+    expect(credentialsWithRuntimeToken.status).toBe(401);
+  });
+});
+
 interface CreateTestServerOptions {
   auth?: { adminToken?: string; runtimeToken?: string };
   actionPolicy?: ActionPolicyService;

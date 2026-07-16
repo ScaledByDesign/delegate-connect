@@ -30,6 +30,15 @@ import {
 } from "./actions/action-idempotency.ts";
 import { ActionRunner } from "./actions/action-runner.ts";
 import { renderActionMarkdown } from "./api/action-markdown.ts";
+import {
+  matchesLensFilters,
+  parseLensLimit,
+  parseLensScope,
+  parseLensStatus,
+  serializeAdminCredential,
+  serializeLensConnection,
+  summarizeLensTotals,
+} from "./api/admin-lens.ts";
 import { clearLocalAuthCookie, createLocalAuthMiddleware, readLocalAuthSession } from "./api/auth.ts";
 import { getResponseCachePolicy } from "./api/cache-policy.ts";
 import { HttpRequestError, internalError, jsonError, notFound, readJsonBody } from "./api/http-utils.ts";
@@ -167,6 +176,14 @@ export class ConnectServer {
     app.get("/api/connections", (context) => this.listConnections(context));
     app.put("/api/connections/:service", (context) => this.upsertConnection(context, context.req.param("service")));
     app.delete("/api/connections/:service", (context) => this.disconnect(context, context.req.param("service")));
+
+    app.get("/api/admin/lens/connections", (context) => this.listLensConnections(context));
+    app.post("/api/admin/lens/connections/:service/verify", (context) =>
+      this.verifyLensConnection(context, context.req.param("service")),
+    );
+    app.get("/api/admin/credentials/:service", (context) =>
+      this.getAdminCredential(context, context.req.param("service")),
+    );
 
     app.get("/api/runs", (context) => this.listRuns(context));
     app.post("/api/files", (context) => this.createTransitFile(context));
@@ -695,6 +712,73 @@ export class ConnectServer {
       this.options.connections.disconnect(service, connectionName),
       logContext,
     );
+  }
+
+  private async listLensConnections(context: Context): Promise<Response> {
+    const stored = await this.options.connections.listAllConnections();
+    const filters = {
+      workspaceId: optionalString(context.req.query("workspaceId")),
+      userId: optionalString(context.req.query("userId")),
+      service: optionalString(context.req.query("service")),
+      scope: parseLensScope(optionalString(context.req.query("scope"))),
+      status: parseLensStatus(optionalString(context.req.query("status"))),
+      limit: parseLensLimit(optionalString(context.req.query("limit"))),
+    };
+
+    const connections = stored
+      .map((connection) => serializeLensConnection(connection))
+      .filter((connection) => matchesLensFilters(connection, filters))
+      .slice(0, filters.limit);
+
+    return context.json({
+      connections,
+      totals: summarizeLensTotals(connections),
+    });
+  }
+
+  private async verifyLensConnection(context: Context, service: string): Promise<Response> {
+    try {
+      const body = await readJsonBody(context);
+      const connectionName = requiredString(body.connectionName, "connectionName");
+      // getCredential may refresh an expired OAuth token and persist it — verify is not read-only for oauth2.
+      const credential = await this.options.connections.getCredential(service, connectionName);
+      if (!credential) {
+        return context.json({ ok: false, error: "connection not found" });
+      }
+
+      return context.json({ ok: true });
+    } catch (error) {
+      if (error instanceof ConnectionError && error.code === "connection_not_found") {
+        return context.json({ ok: false, error: "connection not found" });
+      }
+
+      return context.json({
+        ok: false,
+        error: error instanceof Error ? error.message : "verification failed",
+      });
+    }
+  }
+
+  private async getAdminCredential(context: Context, service: string): Promise<Response> {
+    const connectionName = readConnectionName(context);
+    try {
+      const credential = await this.options.connections.getCredential(service, connectionName);
+      if (!credential) {
+        return notFound(context);
+      }
+
+      return context.json(serializeAdminCredential(service, connectionName ?? defaultConnectionName, credential));
+    } catch (error) {
+      if (error instanceof ConnectionError) {
+        if (error.code === "connection_not_found") {
+          return notFound(context);
+        }
+
+        return jsonError(context, mapConnectionErrorStatus(error), error.code, error.message);
+      }
+
+      throw error;
+    }
   }
 
   private async createOAuthAuthorization(context: Context): Promise<Response> {
