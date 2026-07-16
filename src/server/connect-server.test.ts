@@ -935,6 +935,48 @@ describe("ConnectServer", () => {
     expect(runtimeTokenCall.status).toBe(200);
   });
 
+  it("accepts the admin token on POST /mcp", async () => {
+    const app = createTestServer([apiKeyProvider], {
+      auth: { adminToken: "local-token", runtimeToken: "runtime-token" },
+    }).createApp();
+
+    const initialize = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-03-26",
+        capabilities: {},
+        clientInfo: { name: "probe", version: "0" },
+      },
+    };
+    const headers = {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream",
+    };
+
+    const adminCall = await app.request("/mcp", {
+      method: "POST",
+      headers: { ...headers, authorization: "Bearer local-token" },
+      body: JSON.stringify(initialize),
+    });
+    expect(adminCall.status).toBe(200);
+
+    const runtimeCall = await app.request("/mcp", {
+      method: "POST",
+      headers: { ...headers, authorization: "Bearer runtime-token" },
+      body: JSON.stringify(initialize),
+    });
+    expect(runtimeCall.status).toBe(200);
+
+    const unauthenticatedCall = await app.request("/mcp", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(initialize),
+    });
+    expect(unauthenticatedCall.status).toBe(401);
+  });
+
   it("manages runtime tokens and gates runtime API calls after one is created", async () => {
     const runtimeTokens = new RuntimeTokenService(new MemoryRuntimeTokenStore());
     const app = createTestServer([apiKeyProvider], { runtimeTokens }).createApp();

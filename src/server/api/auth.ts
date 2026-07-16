@@ -208,7 +208,13 @@ function readAuthScope(path: string): AuthScope {
 }
 
 function canUseAdminAuth(path: string, method: string): boolean {
-  return method === "POST" && /^\/v1\/actions\/[^/]+$/.test(path);
+  if (method !== "POST") {
+    return false;
+  }
+  // Admin bearer is additionally accepted on action execution and on the MCP
+  // endpoint, so admin-scoped operators can drive the MCP surface directly
+  // without minting a runtime token.
+  return path === "/mcp" || /^\/v1\/actions\/[^/]+$/.test(path);
 }
 
 function tokenForScope(options: LocalAuthOptions, scope: AuthScope): string | undefined {
