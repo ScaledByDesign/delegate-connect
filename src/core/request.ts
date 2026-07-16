@@ -120,16 +120,43 @@ export async function readBoundedResponseBytes(
   return bytes;
 }
 
+// Egress targets are classified into two tiers for the SSRF guard:
+//
+//   - "reserved" (localHostnames, cloudMetadataHostnames, localHostnameSuffixes,
+//     reservedIpv4Cidrs, reservedIpv6Cidrs): loopback, link-local, cloud-metadata,
+//     multicast, and other unsafe special-use ranges. ALWAYS blocked — the
+//     private-network opt-in never unblocks these, because they are the classic
+//     SSRF escalation targets ("don't let the deployment attack itself").
+//   - "private" (privateHostnameSuffixes, privateIpv4Cidrs, privateIpv6Cidrs):
+//     RFC 1918 / CGNAT / IPv6 ULA LAN ranges and private hostname suffixes.
+//     Blocked by default, but reachable once a self-hosted deployment opts in via
+//     OOMOL_CONNECT_ALLOW_PRIVATE_NETWORK (see isPrivateNetworkAccessAllowed).
+//
+// So the flag toggles LAN/private-network reachability only; loopback and
+// link-local/metadata stay blocked in both states.
+
+// Always blocked: names that resolve to loopback, regardless of the flag.
 const localHostnames = new Set(["localhost", "localhost.localdomain", "ip6-localhost", "ip6-loopback"]);
+// Always blocked: cloud instance-metadata endpoints (prime SSRF escalation targets).
 const cloudMetadataHostnames = new Set(["instance-data.ec2.internal", "metadata.google.internal", "metadata.goog"]);
+// Always blocked: .localhost (RFC 6761 loopback) and the localhost.localdomain alias.
 const localHostnameSuffixes = [".localhost", ".localdomain"];
+// Flag-gated: private hostname suffixes with mixed standards status — .local (mDNS special-use,
+// RFC 6762), .internal (ICANN 2024 private-use reservation), .home/.lan (convention only).
+// Reachable only with the private-network opt-in.
 const privateHostnameSuffixes = [".local", ".internal", ".home", ".lan"];
+// Flag-gated: RFC 1918 private-use (10/8, 172.16/12, 192.168/16) + RFC 6598 CGNAT (100.64/10).
 const privateIpv4Cidrs: Array<[number, number]> = [
   [ipv4ToNumber("10.0.0.0"), 8],
   [ipv4ToNumber("100.64.0.0"), 10],
   [ipv4ToNumber("172.16.0.0"), 12],
   [ipv4ToNumber("192.168.0.0"), 16],
 ];
+// Always blocked (opt-in never unblocks these): this-network (0/8), loopback (127/8),
+// link-local incl. the 169.254.169.254 metadata host (169.254/16), IANA protocol/documentation/
+// benchmark blocks, multicast (224/4), and future-use (240/4). 100.100.100.200/32 is the Alibaba
+// Cloud metadata endpoint — it sits inside CGNAT (100.64/10) but is pinned here so it stays
+// blocked even after opting into private networks.
 const reservedIpv4Cidrs: Array<[number, number]> = [
   [ipv4ToNumber("0.0.0.0"), 8],
   [ipv4ToNumber("100.100.100.200"), 32],
@@ -142,6 +169,33 @@ const reservedIpv4Cidrs: Array<[number, number]> = [
   [ipv4ToNumber("203.0.113.0"), 24],
   [ipv4ToNumber("224.0.0.0"), 4],
   [ipv4ToNumber("240.0.0.0"), 4],
+];
+// Always blocked: unspecified/loopback (::, ::1), link-local (fe80::/10), multicast (ff00::/8),
+// plus discard, documentation, benchmark, and other special-purpose IPv6 ranges (RFC 6890 registry).
+const reservedIpv6Cidrs: Array<[Uint8Array, number]> = [
+  [ipv6ToBytes("::"), 128],
+  [ipv6ToBytes("::1"), 128],
+  [ipv6ToBytes("100::"), 64],
+  [ipv6ToBytes("100:0:0:1::"), 64],
+  [ipv6ToBytes("64:ff9b:1::"), 48],
+  [ipv6ToBytes("2001:2::"), 48],
+  [ipv6ToBytes("2001:db8::"), 32],
+  [ipv6ToBytes("3fff::"), 20],
+  [ipv6ToBytes("5f00::"), 16],
+  [ipv6ToBytes("fe80::"), 10],
+  [ipv6ToBytes("ff00::"), 8],
+];
+// Flag-gated: IPv6 ULA (fc00::/7, RFC 4193) and deprecated site-local (fec0::/10, RFC 3879).
+// Only reached via the resolved-address path — assertPublicHttpUrl rejects every literal IPv6 URL.
+const privateIpv6Cidrs: Array<[Uint8Array, number]> = [
+  [ipv6ToBytes("fc00::"), 7],
+  [ipv6ToBytes("fec0::"), 10],
+];
+/** IPv6 ranges that embed an IPv4 address checked against the IPv4 policy: [prefix, bits, v4 byte offset]. */
+const ipv4EmbeddedIpv6Cidrs: Array<[Uint8Array, number, number]> = [
+  [ipv6ToBytes("::ffff:0:0"), 96, 12],
+  [ipv6ToBytes("64:ff9b::"), 96, 12],
+  [ipv6ToBytes("2002::"), 16, 2],
 ];
 
 export interface PublicHttpUrlOptions {
@@ -216,14 +270,7 @@ export function assertPublicHttpUrl(value: string, options: PublicHttpUrlOptions
   }
 
   const ipv4 = parseIpv4(hostname);
-  if (ipv4 !== undefined && reservedIpv4Cidrs.some(([network, bits]) => ipv4InCidr(ipv4, network, bits))) {
-    throw options.createError(`${options.fieldName} must not target private or reserved IP addresses`);
-  }
-  if (
-    ipv4 !== undefined &&
-    !options.allowPrivateNetwork &&
-    privateIpv4Cidrs.some(([network, bits]) => ipv4InCidr(ipv4, network, bits))
-  ) {
+  if (ipv4 !== undefined && isBlockedIpv4(ipv4, options.allowPrivateNetwork === true)) {
     throw options.createError(`${options.fieldName} must not target private or reserved IP addresses`);
   }
 
@@ -235,6 +282,62 @@ export function assertPublicHttpUrl(value: string, options: PublicHttpUrlOptions
     url.hostname = hostname;
   }
   return url;
+}
+
+/**
+ * Return whether a resolved IP address (IPv4 or IPv6 text form) is a private,
+ * reserved, loopback, link-local, or metadata target that provider egress must
+ * not reach.
+ *
+ * This complements {@link assertPublicHttpUrl}: the URL guard validates literal
+ * hostnames before a request, while this check validates the addresses a
+ * hostname actually resolves to (closing name→private-IP bypasses). IPv6
+ * ranges that embed an IPv4 address (v4-mapped, NAT64, 6to4) are checked
+ * against the IPv4 policy. Unparseable input is treated as blocked.
+ */
+export function isBlockedIpAddress(address: string, allowPrivateNetwork = false): boolean {
+  const ipv4 = parseIpv4(address);
+  if (ipv4 !== undefined) {
+    return isBlockedIpv4(ipv4, allowPrivateNetwork);
+  }
+
+  const ipv6 = parseIpv6(address);
+  if (ipv6 === undefined) {
+    return true;
+  }
+  if (reservedIpv6Cidrs.some(([network, bits]) => ipv6InCidr(ipv6, network, bits))) {
+    return true;
+  }
+  if (!allowPrivateNetwork && privateIpv6Cidrs.some(([network, bits]) => ipv6InCidr(ipv6, network, bits))) {
+    return true;
+  }
+  for (const [network, bits, offset] of ipv4EmbeddedIpv6Cidrs) {
+    if (ipv6InCidr(ipv6, network, bits)) {
+      const embedded =
+        ((ipv6[offset]! << 24) | (ipv6[offset + 1]! << 16) | (ipv6[offset + 2]! << 8) | ipv6[offset + 3]!) >>> 0;
+      return isBlockedIpv4(embedded, allowPrivateNetwork);
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether a hostname is a canonical dotted-decimal IPv4 literal (each octet
+ * 0-255), matching exactly what {@link assertPublicHttpUrl} validates as a
+ * literal IPv4. Callers use this to decide a hostname is already an
+ * address-validated literal and does not need DNS resolution — it must not
+ * over-match looser numeric forms (octal, out-of-range) that resolvers would
+ * still interpret as an address.
+ */
+export function isIpv4Address(hostname: string): boolean {
+  return parseIpv4(hostname) !== undefined;
+}
+
+function isBlockedIpv4(value: number, allowPrivateNetwork: boolean): boolean {
+  if (reservedIpv4Cidrs.some(([network, bits]) => ipv4InCidr(value, network, bits))) {
+    return true;
+  }
+  return !allowPrivateNetwork && privateIpv4Cidrs.some(([network, bits]) => ipv4InCidr(value, network, bits));
 }
 
 function normalizeHostname(value: string): string {
@@ -264,6 +367,100 @@ function parseIpv4(hostname: string): number | undefined {
   }
 
   return value >>> 0;
+}
+
+function parseIpv6(value: string): Uint8Array | undefined {
+  let input = value.toLowerCase();
+  const zoneIndex = input.indexOf("%");
+  if (zoneIndex !== -1) {
+    input = input.slice(0, zoneIndex);
+  }
+  if (input.startsWith("[") && input.endsWith("]")) {
+    input = input.slice(1, -1);
+  }
+  if (!input.includes(":")) {
+    return undefined;
+  }
+
+  let head = input;
+  let tail = "";
+  const compressedIndex = input.indexOf("::");
+  if (compressedIndex !== -1) {
+    if (input.includes("::", compressedIndex + 1)) {
+      return undefined;
+    }
+    head = input.slice(0, compressedIndex);
+    tail = input.slice(compressedIndex + 2);
+  }
+
+  const headWords = parseIpv6Words(head);
+  const tailWords = parseIpv6Words(tail);
+  if (headWords === undefined || tailWords === undefined) {
+    return undefined;
+  }
+  const missing = 8 - headWords.length - tailWords.length;
+  if (compressedIndex === -1 ? headWords.length !== 8 : missing < 1) {
+    return undefined;
+  }
+
+  const words =
+    compressedIndex === -1 ? headWords : [...headWords, ...new Array<number>(missing).fill(0), ...tailWords];
+  const bytes = new Uint8Array(16);
+  for (const [index, word] of words.entries()) {
+    bytes[index * 2] = word >>> 8;
+    bytes[index * 2 + 1] = word & 0xff;
+  }
+  return bytes;
+}
+
+function parseIpv6Words(value: string): number[] | undefined {
+  if (value === "") {
+    return [];
+  }
+
+  const words: number[] = [];
+  const parts = value.split(":");
+  for (const [index, part] of parts.entries()) {
+    if (part.includes(".")) {
+      if (index !== parts.length - 1) {
+        return undefined;
+      }
+      const ipv4 = parseIpv4(part);
+      if (ipv4 === undefined) {
+        return undefined;
+      }
+      words.push(ipv4 >>> 16, ipv4 & 0xffff);
+      continue;
+    }
+    if (!/^[0-9a-f]{1,4}$/u.test(part)) {
+      return undefined;
+    }
+    words.push(Number.parseInt(part, 16));
+  }
+  return words;
+}
+
+function ipv6ToBytes(value: string): Uint8Array {
+  const parsed = parseIpv6(value);
+  if (parsed === undefined) {
+    throw new Error(`invalid IPv6 CIDR base: ${value}`);
+  }
+  return parsed;
+}
+
+function ipv6InCidr(value: Uint8Array, network: Uint8Array, bits: number): boolean {
+  const fullBytes = Math.floor(bits / 8);
+  for (let index = 0; index < fullBytes; index++) {
+    if (value[index] !== network[index]) {
+      return false;
+    }
+  }
+  const remainderBits = bits % 8;
+  if (remainderBits === 0) {
+    return true;
+  }
+  const mask = (0xff << (8 - remainderBits)) & 0xff;
+  return (value[fullBytes]! & mask) === (network[fullBytes]! & mask);
 }
 
 function parseContentLength(value: string | null): number | undefined {
