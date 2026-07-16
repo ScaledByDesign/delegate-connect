@@ -61,7 +61,7 @@ describe("sortProviders", () => {
   it("places connected providers before pinned, recommended, and display-name ordering", () => {
     const providers = [
       provider("airtable", "Airtable"),
-      provider("figma", "Figma"),
+      provider("slack", "Slack"),
       provider("github", "GitHub"),
       provider("zendesk", "Zendesk"),
     ];
@@ -70,9 +70,11 @@ describe("sortProviders", () => {
       ["zendesk", { service: "zendesk", authType: "oauth2", metadata: {} }],
     ]);
 
+    // slack outranks github in recommendedProviderServices; zendesk is the
+    // only real (non-virtual) connection so it leads.
     expect(sortProviders(providers, connections).map((item) => item.service)).toEqual([
       "zendesk",
-      "figma",
+      "slack",
       "github",
       "airtable",
     ]);
