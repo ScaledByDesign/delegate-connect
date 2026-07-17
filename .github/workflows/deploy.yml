@@ -34,6 +34,17 @@ jobs:
       - name: Put node_modules/.bin on PATH (wrangler)
         run: echo "$PWD/node_modules/.bin" >> "$GITHUB_PATH"
 
+      - name: Debug CF token (from runner)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "token_len=${#CLOUDFLARE_API_TOKEN}"
+          echo "account_id=$CLOUDFLARE_ACCOUNT_ID"
+          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
+            | python3 -c "import sys,json;d=json.load(sys.stdin);print('list_scripts.success:',d.get('success'),'errors:',d.get('errors'))" || true
+
       - name: Deploy to Cloudflare
         # deploy:cloudflare = generate:catalog && build:web && copy-catalog-assets
         # && wrangler deploy --config wrangler.jsonc --minify
