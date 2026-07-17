@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "open-connector",
+  "account_id": "3e0e846f80abb19f4d419e4aa44dff04",
+  "main": "src/server/cloudflare.ts",
+  "compatibility_date": "2026-07-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "cache": {
+    "enabled": true,
+  },
+  "assets": {
+    "directory": "dist/web",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/v1/*", "/mcp*", "/oauth/*", "/docs", "/docs/*", "/openapi.json", "/health"],
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "persist": true,
+    },
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "open-connector",
+      "database_id": "7dff80f5-0bd7-4f2f-bf47-326a361a4fb8",
+      "migrations_dir": "migrations",
+    },
+  ],
+  // Option A: R2 backend (default). Comment out this whole block to use Option B (KV).
+  "r2_buckets": [
+    {
+      "binding": "TRANSIT_FILES",
+      "bucket_name": "open-connector-transit-files",
+    },
+  ],
+}
