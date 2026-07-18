@@ -1,5 +1,7 @@
 import type { ProviderDefinition } from "../../core/types.ts";
 
+import { bifrostActions } from "./actions.ts";
+
 const service = "bifrost";
 
 /**
@@ -33,5 +35,5 @@ export const provider: ProviderDefinition = {
     },
   ],
   homepageUrl: "https://gateway.delegate.ws",
-  actions: [],
+  actions: bifrostActions,
 };

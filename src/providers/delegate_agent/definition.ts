@@ -1,5 +1,7 @@
 import type { ProviderDefinition } from "../../core/types.ts";
 
+import { delegateAgentActions } from "./actions.ts";
+
 const service = "delegate_agent";
 
 /**
@@ -35,5 +37,5 @@ export const provider: ProviderDefinition = {
     },
   ],
   homepageUrl: "https://agent.delegate.ws",
-  actions: [],
+  actions: delegateAgentActions,
 };
